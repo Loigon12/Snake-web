@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Snake — Sebastian Londoño</title>
+    <title>Snake — Sebastian Londoño (Versión XL)</title>
     <style>
         body {
             background-color: #1a1a1a;
@@ -15,67 +15,140 @@
             margin: 0;
             font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
             color: white;
-            overflow: hidden; /* Evita scroll accidental en móvil */
+            overflow: hidden;
         }
 
+        /* --- PANTALLA DE INICIO --- */
+        #startup-screen {
+            position: fixed;
+            top: 0; left: 0; width: 100%; height: 100%;
+            background-color: #0d0d0d;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            z-index: 100;
+            transition: opacity 0.5s ease;
+        }
+
+        .loader-container {
+            position: relative;
+            width: 200px;
+            height: 50px;
+            margin-bottom: 20px;
+        }
+
+        .loader-snake {
+            position: absolute;
+            width: 60px; height: 20px;
+            background: #32CD32;
+            border-radius: 5px;
+            left: -100px;
+            animation: snakeMove 2s infinite linear;
+        }
+
+        .loader-apple {
+            position: absolute;
+            width: 15px; height: 15px;
+            background: red;
+            border-radius: 50%;
+            right: 20px; top: 2px;
+            animation: appleAppear 2s infinite linear;
+        }
+
+        @keyframes snakeMove {
+            0% { left: -60px; width: 60px; }
+            45% { left: 120px; width: 60px; }
+            50% { left: 120px; width: 80px; }
+            60% { left: 200px; width: 40px; }
+            100% { left: 250px; }
+        }
+
+        @keyframes appleAppear {
+            0%, 48% { opacity: 1; transform: scale(1); }
+            50%, 100% { opacity: 0; transform: scale(0); }
+        }
+
+        #begin-button {
+            display: none;
+            background-color: #501414;
+            color: white;
+            border: 2px solid #ff4d4d;
+            padding: 15px 40px;
+            font-size: 20px;
+            font-weight: bold;
+            cursor: pointer;
+            text-transform: uppercase;
+        }
+
+        /* --- CONTENEDOR DE JUEGO MÁS GRANDE --- */
         #scoreboard {
             width: 100%;
-            max-width: 600px;
+            max-width: 800px; /* Aumentado de 600 a 800 */
             display: flex;
             justify-content: space-between;
             align-items: center;
-            padding: 10px 20px;
+            padding: 12px 25px;
             background-color: #0d0d0d;
-            border-bottom: 2px solid #501414;
+            border-bottom: 3px solid #501414;
             box-sizing: border-box;
-            font-size: 18px;
-            font-weight: bold;
+            font-size: 20px;
         }
 
         #game-container {
             position: relative;
-            width: 600px;
-            height: 600px;
-            box-shadow: 0 10px 30px rgba(0,0,0,0.5);
-            touch-action: none; /* Crucial: evita que el navegador deslice la página al tocar el juego */
+            width: 800px; /* Área de juego ampliada */
+            height: 800px;
+            box-shadow: 0 15px 50px rgba(0,0,0,0.6);
+            touch-action: none;
         }
 
         canvas {
             background-color: #0d0d0d;
             display: block;
-            max-width: 100%;
-            height: auto;
+            width: 100%; /* Se adapta al contenedor */
+            height: 100%;
         }
 
         #restart-button {
-            background-color: rgba(40, 40, 40, 0.9);
+            background-color: rgba(45, 45, 45, 0.95);
             color: white;
-            border: 1px solid rgb(70, 70, 70);
-            padding: 8px 16px;
+            border: 1px solid #444;
+            padding: 10px 20px;
             font-weight: bold;
             cursor: pointer;
-            outline: none;
         }
 
         #game-over-overlay {
             position: absolute;
             top: 0; left: 0; width: 100%; height: 100%;
-            background-color: rgba(0, 0, 0, 0.8);
+            background-color: rgba(0, 0, 0, 0.85);
             display: none;
             flex-direction: column;
             justify-content: center;
             align-items: center;
-            text-align: center;
-            pointer-events: none;
         }
 
-        @media (max-width: 620px) {
-            #game-container, #scoreboard { width: 95vw; }
-            #game-container { height: 95vw; }
+        /* Adaptabilidad para móviles (ocupa casi toda la pantalla) */
+        @media (max-width: 820px) {
+            #game-container, #scoreboard {
+                width: 98vw;
+                height: 98vw;
+            }
+            #scoreboard { height: auto; }
         }
     </style>
 </head>
 <body>
+
+<div id="startup-screen">
+    <div class="loader-container">
+        <div class="loader-snake"></div>
+        <div class="loader-apple"></div>
+    </div>
+    <div id="loading-text">PREPARANDO TABLERO XL...</div>
+    <button id="begin-button">EMPEZAR JUEGO</button>
+</div>
 
 <div id="scoreboard">
     <div id="score-text">Manzanas: 0</div>
@@ -84,49 +157,60 @@
 </div>
 
 <div id="game-container">
-    <canvas id="snakeGame" width="600" height="600"></canvas>
+    <canvas id="snakeGame" width="800" height="800"></canvas>
     <div id="game-over-overlay">
-        <h1 style="color: red; font-size: clamp(32px, 8vw, 48px);">¡Game Over!</h1>
-        <p id="final-score" style="font-size: 24px;">Puntuación: 0</p>
-        <p style="font-size: 16px; color: #aaa;">Toca 'Reiniciar' o presiona 'R'</p>
+        <h1 style="color: red; font-size: 50px; margin: 0;">¡GAME OVER!</h1>
+        <p id="final-score" style="font-size: 30px; margin: 15px 0;">Puntuación: 0</p>
+        <p style="font-size: 18px; color: #aaa;">Presiona 'R' o Toca 'Reiniciar'</p>
     </div>
 </div>
 
+
+
 <script>
-    // === Configuración [cite: 43-46] ===
+    // Configuración Ampliada
     const GRID_SIZE = 25;
-    const BOARD_SIZE = 600;
-    const COLUMNS = BOARD_SIZE / GRID_SIZE;
-    const ROWS = BOARD_SIZE / GRID_SIZE;
-    const INITIAL_BODY_PARTS = 6;
-    const TIMER_DELAY = 120;
+    const BOARD_SIZE = 800; // Incrementado para mayor espacio
+    const COLUMNS = BOARD_SIZE / GRID_SIZE; // 32 columnas
+    const ROWS = BOARD_SIZE / GRID_SIZE;    // 32 filas
+    const TIMER_DELAY = 110; // Un poco más rápido por ser el mapa más grande
 
     const canvas = document.getElementById('snakeGame');
     const ctx = canvas.getContext('2d');
     const scoreElement = document.getElementById('score-text');
     const highScoreElement = document.getElementById('high-score-text');
-    const overlay = document.getElementById('game-over-overlay');
+    const startupScreen = document.getElementById('startup-screen');
+    const beginButton = document.getElementById('begin-button');
 
-    let snake = [];
-    let appleX, appleY, applesEaten = 0;
-    let direction = 'R'; // [cite: 107]
-    let running = false;
-    let gameTimer;
+    let snake = [], appleX, appleY, applesEaten = 0;
+    let direction = 'R', running = false, gameTimer;
     let highScore = localStorage.getItem('snakeHighScore') || 0;
 
-    // --- Soporte Táctil (Swipe) ---
-    let touchStartX = 0;
-    let touchStartY = 0;
+    window.onload = () => {
+        setTimeout(() => {
+            document.getElementById('loading-text').style.display = 'none';
+            beginButton.style.display = 'block';
+        }, 2000);
+    };
+
+    beginButton.onclick = () => {
+        startupScreen.style.opacity = '0';
+        setTimeout(() => {
+            startupScreen.style.display = 'none';
+            startGame();
+        }, 500);
+    };
 
     function startGame() {
         snake = [];
-        for (let i = 0; i < INITIAL_BODY_PARTS; i++) {
-            snake.push({ x: (Math.floor(COLUMNS / 2) - i) * GRID_SIZE, y: (Math.floor(ROWS / 2)) * GRID_SIZE });
+        // Posición inicial centrada en el nuevo tablero de 32x32
+        for (let i = 0; i < 6; i++) {
+            snake.push({ x: (16 - i) * GRID_SIZE, y: 16 * GRID_SIZE });
         }
         applesEaten = 0;
         direction = 'R';
         running = true;
-        overlay.style.display = 'none';
+        document.getElementById('game-over-overlay').style.display = 'none';
         updateScore();
         spawnApple();
         if (gameTimer) clearInterval(gameTimer);
@@ -145,28 +229,27 @@
 
     function gameLoop() {
         if (running) {
-            // Mover [cite: 102-107]
             const head = { ...snake[0] };
             if (direction === 'U') head.y -= GRID_SIZE;
             else if (direction === 'D') head.y += GRID_SIZE;
             else if (direction === 'L') head.x -= GRID_SIZE;
             else if (direction === 'R') head.x += GRID_SIZE;
 
+            // Colisión con bordes del nuevo tamaño
+            if (head.x < 0 || head.x >= BOARD_SIZE || head.y < 0 || head.y >= BOARD_SIZE ||
+                snake.some(p => p.x === head.x && p.y === head.y)) {
+                endGame();
+                return;
+            }
+
             snake.unshift(head);
 
-            // Colisión Manzana [cite: 108]
             if (head.x === appleX && head.y === appleY) {
                 applesEaten++;
                 updateScore();
                 spawnApple();
             } else {
                 snake.pop();
-            }
-
-            // Colisiones [cite: 110-112]
-            if (head.x < 0 || head.x >= BOARD_SIZE || head.y < 0 || head.y >= BOARD_SIZE ||
-                snake.slice(1).some(p => p.x === head.x && p.y === head.y)) {
-                endGame();
             }
         }
         render();
@@ -180,7 +263,7 @@
             localStorage.setItem('snakeHighScore', highScore);
         }
         document.getElementById('final-score').innerText = `Puntuación: ${applesEaten}`;
-        overlay.style.display = 'flex';
+        document.getElementById('game-over-overlay').style.display = 'flex';
         updateScore();
     }
 
@@ -190,51 +273,52 @@
     }
 
     function render() {
-        ctx.fillStyle = '#0d0d0d'; // Fondo [cite: 57]
+        ctx.fillStyle = '#0d0d0d';
         ctx.fillRect(0, 0, BOARD_SIZE, BOARD_SIZE);
 
-        // Cuadrícula [cite: 79-81]
-        ctx.strokeStyle = '#1e1e1e';
+        // Cuadrícula para el área ampliada
+        ctx.strokeStyle = '#1a1a1a';
+        ctx.lineWidth = 1;
         for(let i=0; i<=BOARD_SIZE; i+=GRID_SIZE) {
             ctx.beginPath(); ctx.moveTo(i,0); ctx.lineTo(i,BOARD_SIZE); ctx.stroke();
             ctx.beginPath(); ctx.moveTo(0,i); ctx.lineTo(BOARD_SIZE,i); ctx.stroke();
         }
 
-        // Borde [cite: 82]
+        // Borde rojo grueso
         ctx.strokeStyle = '#501414';
-        ctx.lineWidth = 2;
-        ctx.strokeRect(1, 1, BOARD_SIZE-2, BOARD_SIZE-2);
+        ctx.lineWidth = 4;
+        ctx.strokeRect(2, 2, BOARD_SIZE-4, BOARD_SIZE-4);
 
         if (running) {
-            // Manzana [cite: 85-86]
+            // Manzana
             ctx.fillStyle = 'red';
             ctx.beginPath(); ctx.arc(appleX+GRID_SIZE/2, appleY+GRID_SIZE/2, GRID_SIZE/2.2, 0, Math.PI*2); ctx.fill();
             ctx.fillStyle = 'white';
             ctx.beginPath(); ctx.arc(appleX+GRID_SIZE/3, appleY+GRID_SIZE/4, GRID_SIZE/8, 0, Math.PI*2); ctx.fill();
 
-            // Serpiente [cite: 88-89]
+            // Serpiente
             snake.forEach((p, i) => {
                 ctx.fillStyle = (i === 0) ? '#32CD32' : '#228B22';
                 ctx.fillRect(p.x, p.y, GRID_SIZE, GRID_SIZE);
-                ctx.strokeStyle = '#222';
+                ctx.strokeStyle = '#111';
                 ctx.strokeRect(p.x, p.y, GRID_SIZE, GRID_SIZE);
             });
         }
     }
 
-    // --- Controles de Teclado (Flechas + WASD)  ---
+    // Controles WASD + Flechas
     window.addEventListener('keydown', e => {
         const key = e.key.toLowerCase();
         if (key === 'r') startGame();
         if (!running) return;
-
         if ((key === 'arrowup' || key === 'w') && direction !== 'D') direction = 'U';
         else if ((key === 'arrowdown' || key === 's') && direction !== 'U') direction = 'D';
         else if ((key === 'arrowleft' || key === 'a') && direction !== 'R') direction = 'L';
         else if ((key === 'arrowright' || key === 'd') && direction !== 'L') direction = 'R';
     });
 
-    // --- Controles Táctiles (Deslizar) ---
+    // Swipe para móviles
+    let touchStartX = 0, touchStartY = 0;
     canvas.addEventListener('touchstart', e => {
         touchStartX = e.changedTouches[0].screenX;
         touchStartY = e.changedTouches[0].screenY;
@@ -244,10 +328,8 @@
         if (!running) return;
         let diffX = e.changedTouches[0].screenX - touchStartX;
         let diffY = e.changedTouches[0].screenY - touchStartY;
-
-        // Determinar si el deslizamiento fue mayormente horizontal o vertical
         if (Math.abs(diffX) > Math.abs(diffY)) {
-            if (Math.abs(diffX) > 30) { // Umbral de sensibilidad
+            if (Math.abs(diffX) > 30) {
                 if (diffX > 0 && direction !== 'L') direction = 'R';
                 else if (diffX < 0 && direction !== 'R') direction = 'L';
             }
@@ -260,7 +342,6 @@
     }, false);
 
     document.getElementById('restart-button').onclick = startGame;
-    startGame();
 </script>
 </body>
 </html>
