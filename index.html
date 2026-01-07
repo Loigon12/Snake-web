@@ -2,79 +2,100 @@
 <html lang="es">
 <head>
     <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>Snake — Sebastian Londoño</title>
     <style>
         body {
             background-color: #1a1a1a;
             display: flex;
+            flex-direction: column;
             justify-content: center;
             align-items: center;
-            height: 100vh;
+            min-height: 100vh;
             margin: 0;
             font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            color: white;
+            overflow: hidden; /* Evita scroll accidental en móvil */
+        }
+
+        #scoreboard {
+            width: 100%;
+            max-width: 600px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 10px 20px;
+            background-color: #0d0d0d;
+            border-bottom: 2px solid #501414;
+            box-sizing: border-box;
+            font-size: 18px;
+            font-weight: bold;
         }
 
         #game-container {
             position: relative;
             width: 600px;
             height: 600px;
-            box-shadow: 0 0 20px rgba(0,0,0,0.5);
+            box-shadow: 0 10px 30px rgba(0,0,0,0.5);
+            touch-action: none; /* Crucial: evita que el navegador deslice la página al tocar el juego */
         }
 
         canvas {
             background-color: #0d0d0d;
             display: block;
-        }
-
-        /* Panel de controles superpuesto (ControlPanel) [cite: 3, 6] */
-        #overlay {
-            position: absolute;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            pointer-events: none; /* Permite clics a través del div, excepto en botones */
+            max-width: 100%;
+            height: auto;
         }
 
         #restart-button {
-            position: absolute;
-            top: 12px;
-            right: 12px;
-            width: 100px;
-            height: 40px;
-            pointer-events: auto;
-            background-color: rgba(40, 40, 40, 0.86); /* Negro semi-transparente [cite: 13] */
+            background-color: rgba(40, 40, 40, 0.9);
             color: white;
             border: 1px solid rgb(70, 70, 70);
-            font-family: 'Segoe UI', sans-serif;
+            padding: 8px 16px;
             font-weight: bold;
-            font-size: 16px;
             cursor: pointer;
-            transition: background-color 0.2s;
-            display: flex;
-            align-items: center;
-            justify-content: center;
             outline: none;
         }
 
-        #restart-button:hover {
-            background-color: rgba(60, 60, 60, 0.94); /* Hover effect [cite: 15] */
+        #game-over-overlay {
+            position: absolute;
+            top: 0; left: 0; width: 100%; height: 100%;
+            background-color: rgba(0, 0, 0, 0.8);
+            display: none;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            text-align: center;
+            pointer-events: none;
+        }
+
+        @media (max-width: 620px) {
+            #game-container, #scoreboard { width: 95vw; }
+            #game-container { height: 95vw; }
         }
     </style>
 </head>
 <body>
 
+<div id="scoreboard">
+    <div id="score-text">Manzanas: 0</div>
+    <div id="high-score-text">Record: 0</div>
+    <button id="restart-button">Reiniciar</button>
+</div>
+
 <div id="game-container">
     <canvas id="snakeGame" width="600" height="600"></canvas>
-    <div id="overlay">
-        <button id="restart-button">Reiniciar</button>
+    <div id="game-over-overlay">
+        <h1 style="color: red; font-size: clamp(32px, 8vw, 48px);">¡Game Over!</h1>
+        <p id="final-score" style="font-size: 24px;">Puntuación: 0</p>
+        <p style="font-size: 16px; color: #aaa;">Toca 'Reiniciar' o presiona 'R'</p>
     </div>
 </div>
 
 <script>
-    // === Constantes de configuración [cite: 43-46] ===
-    const BOARD_SIZE = 600;
+    // === Configuración [cite: 43-46] ===
     const GRID_SIZE = 25;
+    const BOARD_SIZE = 600;
     const COLUMNS = BOARD_SIZE / GRID_SIZE;
     const ROWS = BOARD_SIZE / GRID_SIZE;
     const INITIAL_BODY_PARTS = 6;
@@ -82,34 +103,32 @@
 
     const canvas = document.getElementById('snakeGame');
     const ctx = canvas.getContext('2d');
-    const restartBtn = document.getElementById('restart-button');
+    const scoreElement = document.getElementById('score-text');
+    const highScoreElement = document.getElementById('high-score-text');
+    const overlay = document.getElementById('game-over-overlay');
 
-    // === Estado del juego [cite: 47-50] ===
     let snake = [];
-    let applesEaten = 0;
-    let appleX, appleY;
-    let direction = 'R';
+    let appleX, appleY, applesEaten = 0;
+    let direction = 'R'; // [cite: 107]
     let running = false;
     let gameTimer;
-    let highScore = localStorage.getItem('snakeHighScore') || 0; // Carga persistente [cite: 28, 59]
+    let highScore = localStorage.getItem('snakeHighScore') || 0;
 
-    // Sonido (requiere un archivo apple.wav en la misma carpeta) [cite: 23, 38]
-    const appleSound = new Audio('apple.wav'); 
+    // --- Soporte Táctil (Swipe) ---
+    let touchStartX = 0;
+    let touchStartY = 0;
 
     function startGame() {
         snake = [];
         for (let i = 0; i < INITIAL_BODY_PARTS; i++) {
-            snake.push({
-                x: (Math.floor(COLUMNS / 2) - i) * GRID_SIZE,
-                y: Math.floor(ROWS / 2) * GRID_SIZE
-            });
+            snake.push({ x: (Math.floor(COLUMNS / 2) - i) * GRID_SIZE, y: (Math.floor(ROWS / 2)) * GRID_SIZE });
         }
-        
         applesEaten = 0;
         direction = 'R';
         running = true;
+        overlay.style.display = 'none';
+        updateScore();
         spawnApple();
-        
         if (gameTimer) clearInterval(gameTimer);
         gameTimer = setInterval(gameLoop, TIMER_DELAY);
     }
@@ -120,66 +139,37 @@
             overlaps = false;
             appleX = Math.floor(Math.random() * COLUMNS) * GRID_SIZE;
             appleY = Math.floor(Math.random() * ROWS) * GRID_SIZE;
-            
-            // Evitar colisión con la serpiente [cite: 72]
-            for (let part of snake) {
-                if (part.x === appleX && part.y === appleY) {
-                    overlaps = true;
-                    break;
-                }
-            }
+            snake.forEach(p => { if(p.x === appleX && p.y === appleY) overlaps = true; });
         } while (overlaps);
     }
 
     function gameLoop() {
         if (running) {
-            move();
-            checkAppleCollision();
-            checkCollisions();
-        }
-        render();
-    }
+            // Mover [cite: 102-107]
+            const head = { ...snake[0] };
+            if (direction === 'U') head.y -= GRID_SIZE;
+            else if (direction === 'D') head.y += GRID_SIZE;
+            else if (direction === 'L') head.x -= GRID_SIZE;
+            else if (direction === 'R') head.x += GRID_SIZE;
 
-    function move() {
-        const head = { ...snake[0] };
+            snake.unshift(head);
 
-        switch (direction) {
-            case 'U': head.y -= GRID_SIZE; break;
-            case 'D': head.y += GRID_SIZE; break;
-            case 'L': head.x -= GRID_SIZE; break;
-            case 'R': head.x += GRID_SIZE; break;
-        }
+            // Colisión Manzana [cite: 108]
+            if (head.x === appleX && head.y === appleY) {
+                applesEaten++;
+                updateScore();
+                spawnApple();
+            } else {
+                snake.pop();
+            }
 
-        snake.unshift(head);
-        snake.pop(); // Se remueve el último a menos que coma manzana
-    }
-
-    function checkAppleCollision() {
-        if (snake[0].x === appleX && snake[0].y === appleY) {
-            applesEaten++;
-            // Simula el crecimiento de la serpiente [cite: 109]
-            const tail = { ...snake[snake.length - 1] };
-            snake.push(tail);
-            
-            spawnApple();
-            appleSound.play().catch(() => {}); // Ignora error si no hay archivo de sonido
-        }
-    }
-
-    function checkCollisions() {
-        const head = snake[0];
-
-        // Bordes [cite: 111]
-        if (head.x < 0 || head.x >= BOARD_SIZE || head.y < 0 || head.y >= BOARD_SIZE) {
-            endGame();
-        }
-
-        // Cuerpo [cite: 112]
-        for (let i = 1; i < snake.length; i++) {
-            if (head.x === snake[i].x && head.y === snake[i].y) {
+            // Colisiones [cite: 110-112]
+            if (head.x < 0 || head.x >= BOARD_SIZE || head.y < 0 || head.y >= BOARD_SIZE ||
+                snake.slice(1).some(p => p.x === head.x && p.y === head.y)) {
                 endGame();
             }
         }
+        render();
     }
 
     function endGame() {
@@ -187,121 +177,90 @@
         clearInterval(gameTimer);
         if (applesEaten > highScore) {
             highScore = applesEaten;
-            localStorage.setItem('snakeHighScore', highScore); // Guarda récord [cite: 26, 115]
+            localStorage.setItem('snakeHighScore', highScore);
         }
+        document.getElementById('final-score').innerText = `Puntuación: ${applesEaten}`;
+        overlay.style.display = 'flex';
+        updateScore();
+    }
+
+    function updateScore() {
+        scoreElement.innerText = `Manzanas: ${applesEaten}`;
+        highScoreElement.innerText = `Record: ${highScore}`;
     }
 
     function render() {
-        // Limpiar fondo
-        ctx.fillStyle = '#0d0d0d';
+        ctx.fillStyle = '#0d0d0d'; // Fondo [cite: 57]
         ctx.fillRect(0, 0, BOARD_SIZE, BOARD_SIZE);
 
-        if (running) {
-            drawGrid();
-            drawApple();
-            drawSnake();
-            drawScore();
-        } else {
-            drawGameOver();
-        }
-    }
-
-    function drawGrid() {
-        ctx.strokeStyle = '#1e1e1e'; // Cuadrícula sutil [cite: 79]
-        for (let i = 0; i <= COLUMNS; i++) {
-            ctx.beginPath();
-            ctx.moveTo(i * GRID_SIZE, 0);
-            ctx.lineTo(i * GRID_SIZE, BOARD_SIZE);
-            ctx.stroke();
-        }
-        for (let i = 0; i <= ROWS; i++) {
-            ctx.beginPath();
-            ctx.moveTo(0, i * GRID_SIZE);
-            ctx.lineTo(BOARD_SIZE, i * GRID_SIZE);
-            ctx.stroke();
+        // Cuadrícula [cite: 79-81]
+        ctx.strokeStyle = '#1e1e1e';
+        for(let i=0; i<=BOARD_SIZE; i+=GRID_SIZE) {
+            ctx.beginPath(); ctx.moveTo(i,0); ctx.lineTo(i,BOARD_SIZE); ctx.stroke();
+            ctx.beginPath(); ctx.moveTo(0,i); ctx.lineTo(BOARD_SIZE,i); ctx.stroke();
         }
 
-        // Borde rojo oscuro [cite: 82]
+        // Borde [cite: 82]
         ctx.strokeStyle = '#501414';
         ctx.lineWidth = 2;
-        ctx.strokeRect(1, 1, BOARD_SIZE - 2, BOARD_SIZE - 2);
-    }
+        ctx.strokeRect(1, 1, BOARD_SIZE-2, BOARD_SIZE-2);
 
-    function drawApple() {
-        ctx.fillStyle = 'red';
-        ctx.beginPath();
-        ctx.arc(appleX + GRID_SIZE/2, appleY + GRID_SIZE/2, GRID_SIZE/2, 0, Math.PI * 2);
-        ctx.fill();
-        
-        // Brillo blanco [cite: 86]
-        ctx.fillStyle = 'white';
-        ctx.beginPath();
-        ctx.arc(appleX + GRID_SIZE/3, appleY + GRID_SIZE/4, GRID_SIZE/8, 0, Math.PI * 2);
-        ctx.fill();
-    }
+        if (running) {
+            // Manzana [cite: 85-86]
+            ctx.fillStyle = 'red';
+            ctx.beginPath(); ctx.arc(appleX+GRID_SIZE/2, appleY+GRID_SIZE/2, GRID_SIZE/2.2, 0, Math.PI*2); ctx.fill();
+            ctx.fillStyle = 'white';
+            ctx.beginPath(); ctx.arc(appleX+GRID_SIZE/3, appleY+GRID_SIZE/4, GRID_SIZE/8, 0, Math.PI*2); ctx.fill();
 
-    function drawSnake() {
-        snake.forEach((part, i) => {
-            ctx.fillStyle = (i === 0) ? '#32CD32' : '#228B22'; // Cabeza y cuerpo [cite: 88, 89]
-            ctx.fillRect(part.x, part.y, GRID_SIZE, GRID_SIZE);
-            
-            ctx.strokeStyle = '#404040'; // Borde de cada parte [cite: 90]
-            ctx.lineWidth = 1;
-            ctx.strokeRect(part.x, part.y, GRID_SIZE, GRID_SIZE);
-        });
-    }
-
-    function drawScore() {
-        ctx.fillStyle = 'white';
-        ctx.font = 'bold 16px Segoe UI';
-        ctx.textAlign = 'left';
-        ctx.fillText(`Manzanas: ${applesEaten}  Record: ${highScore}`, 12, 24);
-    }
-
-    function drawGameOver() {
-        // Capa semi-transparente [cite: 95]
-        ctx.fillStyle = 'rgba(0, 0, 0, 0.7)';
-        ctx.fillRect(0, 0, BOARD_SIZE, BOARD_SIZE);
-
-        ctx.textAlign = 'center';
-        
-        ctx.fillStyle = 'red';
-        ctx.font = 'bold 48px Segoe UI';
-        ctx.fillText('¡Game Over!', BOARD_SIZE / 2, BOARD_SIZE / 2 - 30);
-
-        ctx.fillStyle = 'white';
-        ctx.font = '28px Segoe UI';
-        ctx.fillText(`Puntuación: ${applesEaten}`, BOARD_SIZE / 2, BOARD_SIZE / 2 + 20);
-
-        ctx.font = '18px Segoe UI';
-        ctx.fillText("Presiona 'R' para reiniciar", BOARD_SIZE / 2, BOARD_SIZE / 2 + 60);
-    }
-
-    // Controles de teclado [cite: 120-127]
-    window.addEventListener('keydown', (e) => {
-        if (!running && e.key.toLowerCase() === 'r') {
-            startGame();
-            return;
+            // Serpiente [cite: 88-89]
+            snake.forEach((p, i) => {
+                ctx.fillStyle = (i === 0) ? '#32CD32' : '#228B22';
+                ctx.fillRect(p.x, p.y, GRID_SIZE, GRID_SIZE);
+                ctx.strokeStyle = '#222';
+                ctx.strokeRect(p.x, p.y, GRID_SIZE, GRID_SIZE);
+            });
         }
+    }
 
+    // --- Controles de Teclado (Flechas + WASD)  ---
+    window.addEventListener('keydown', e => {
+        const key = e.key.toLowerCase();
+        if (key === 'r') startGame();
         if (!running) return;
 
-        switch (e.key) {
-            case 'ArrowUp': if (direction !== 'D') direction = 'U'; break;
-            case 'ArrowDown': if (direction !== 'U') direction = 'D'; break;
-            case 'ArrowLeft': if (direction !== 'R') direction = 'L'; break;
-            case 'ArrowRight': if (direction !== 'L') direction = 'R'; break;
+        if ((key === 'arrowup' || key === 'w') && direction !== 'D') direction = 'U';
+        else if ((key === 'arrowdown' || key === 's') && direction !== 'U') direction = 'D';
+        else if ((key === 'arrowleft' || key === 'a') && direction !== 'R') direction = 'L';
+        else if ((key === 'arrowright' || key === 'd') && direction !== 'L') direction = 'R';
+    });
+
+    // --- Controles Táctiles (Deslizar) ---
+    canvas.addEventListener('touchstart', e => {
+        touchStartX = e.changedTouches[0].screenX;
+        touchStartY = e.changedTouches[0].screenY;
+    }, false);
+
+    canvas.addEventListener('touchend', e => {
+        if (!running) return;
+        let diffX = e.changedTouches[0].screenX - touchStartX;
+        let diffY = e.changedTouches[0].screenY - touchStartY;
+
+        // Determinar si el deslizamiento fue mayormente horizontal o vertical
+        if (Math.abs(diffX) > Math.abs(diffY)) {
+            if (Math.abs(diffX) > 30) { // Umbral de sensibilidad
+                if (diffX > 0 && direction !== 'L') direction = 'R';
+                else if (diffX < 0 && direction !== 'R') direction = 'L';
+            }
+        } else {
+            if (Math.abs(diffY) > 30) {
+                if (diffY > 0 && direction !== 'U') direction = 'D';
+                else if (diffY < 0 && direction !== 'D') direction = 'U';
+            }
         }
-    });
+    }, false);
 
-    restartBtn.addEventListener('click', () => {
-        startGame();
-        canvas.focus();
-    });
-
-    // Iniciar
+    document.getElementById('restart-button').onclick = startGame;
     startGame();
-
 </script>
 </body>
 </html>
